@@ -1,8 +1,8 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, VoiceConnectionStatus, entersState } = require('@discordjs/voice');
 const http = require('http');
 
-// نظام الحفاظ على النشاط لـ UptimeRobot
+// نظام الحفاظ على النشاط (لازم للربط مع UptimeRobot)
 http.createServer((req, res) => {
   res.write("Bot is Alive!");
   res.end();
@@ -12,14 +12,12 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
     ],
 });
 
-// قراءة التوكن من إعدادات Render (لحماية البوت من التعطيل)
-const TOKEN = process.env.TOKEN; 
-const VOICE_ID = '1461512665087344838'; 
+// --- ضع بيانات البوت هنا ---
+const TOKEN = process.env.TOKEN; // الأفضل تحطه في Environment في Render
+const VOICE_ID = '1461512665087344838'; // ايدي الروم الصوتي
 
 async function connectToVoice(channel) {
     try {
@@ -27,10 +25,11 @@ async function connectToVoice(channel) {
             channelId: channel.id,
             guildId: channel.guild.id,
             adapterCreator: channel.guild.voiceAdapterCreator,
-            selfDeaf: true,
+            selfDeaf: true, // يخلي البوت أصم (يخفف لاق)
             selfMute: false,
         });
 
+        // ميزة إعادة الاتصال التلقائي إذا فصل
         connection.on(VoiceConnectionStatus.Disconnected, async () => {
             try {
                 await Promise.race([
@@ -38,40 +37,27 @@ async function connectToVoice(channel) {
                     entersState(connection, VoiceConnectionStatus.Connecting, 5000),
                 ]);
             } catch (e) {
-                console.log("⚠️ إعادة اتصال تلقائي...");
+                console.log("⚠️ البوت فصل.. جاري إعادة الدخول...");
                 connection.destroy();
                 connectToVoice(channel);
             }
         });
+
+        connection.on('error', error => {
+            console.error("Voice Error:", error);
+            if (error.message.includes('socket closed')) {
+                connectToVoice(channel);
+            }
+        });
     } catch (error) {
-        console.error("Voice Error:", error);
+        console.error("Connection Error:", error);
     }
 }
 
 client.on('ready', () => {
-    console.log(`✅ ${client.user.tag} is Online!`);
+    console.log(`✅ البوت شغال باسم: ${client.user.tag}`);
     const channel = client.channels.cache.get(VOICE_ID);
     if (channel) connectToVoice(channel);
-});
-
-client.on('messageCreate', async (message) => {
-    if (message.content === '!تقديم') {
-        const embed = new EmbedBuilder()
-            .setAuthor({ name: 'إدارة 73™', iconURL: client.user.displayAvatarURL() })
-            .setTitle('تعلن إدارة 73™ عن فتح باب التقديم برتبة STAFF')
-            .setDescription(`\n📌 **القسم** : [📝] **الأسئلة** :\n\nقم بالضغط على الزر أدناه للبدء.`)
-            .setColor('#2b2d31');
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('apply_staff')
-                .setLabel('تقديم')
-                .setEmoji('📝')
-                .setStyle(ButtonStyle.Primary)
-        );
-
-        message.channel.send({ embeds: [embed], components: [row] });
-    }
 });
 
 client.login(TOKEN);
