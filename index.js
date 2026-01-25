@@ -9,7 +9,7 @@ const client = new Client({
 });
 
 const TOKEN = process.env.TOKEN; 
-const VOICE_ID = '1461515866041487575'; // تأكد أن هذا الإيدي صحيح 100%
+const VOICE_ID = '1461512665087344838'; // تأكد أن هذا الإيدي صحيح 100%
 
 client.on('ready', () => {
     console.log(`✅ البوت شغال: ${client.user.tag}`);
