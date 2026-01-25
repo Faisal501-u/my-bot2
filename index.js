@@ -19,7 +19,7 @@ const client = new Client({
 
 // قراءة التوكن من إعدادات Render (لحماية البوت من التعطيل)
 const TOKEN = process.env.TOKEN; 
-const VOICE_ID = '1461512665087344838'; 
+const VOICE_ID = '1461515866041487575'; 
 
 async function connectToVoice(channel) {
     try {
