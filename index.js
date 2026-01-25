@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, VoiceConnectionStatus, entersState } = require('@discordjs/voice');
 const http = require('http');
 
-// الحفاظ على نشاط البوت 24/7
+// نظام الحفاظ على النشاط (لربطه مع UptimeRobot)
 http.createServer((req, res) => {
   res.write("Bot is Alive!");
   res.end();
@@ -15,9 +15,9 @@ const client = new Client({
     ],
 });
 
-// --- البيانات الخاصة بك ---
+// إعدادات البوت
 const TOKEN = process.env.TOKEN; 
-const VOICE_ID = '1461512665087344838'; // الأيدي الجديد اللي أرسلته
+const VOICE_ID = '1461512665087344838'; // الأيدي اللي أرسلته
 
 async function connectToVoice(channel) {
     try {
@@ -29,35 +29,43 @@ async function connectToVoice(channel) {
             selfMute: false,
         });
 
-        console.log(`📡 جاري محاولة الاتصال بـ: ${channel.name}`);
+        console.log(`⏳ محاولة دخول الروم: ${channel.name}`);
 
+        // التعامل مع حالات الانقطاع
         connection.on(VoiceConnectionStatus.Disconnected, async () => {
             try {
-                // محاولة إعادة الاتصال التلقائي خلال 5 ثوانٍ
                 await Promise.race([
                     entersState(connection, VoiceConnectionStatus.Signalling, 5000),
                     entersState(connection, VoiceConnectionStatus.Connecting, 5000),
                 ]);
             } catch (e) {
-                console.log("⚠️ فصل البوت، جاري العودة للروم...");
+                console.log("⚠️ تم قطع الاتصال، جاري العودة...");
+                connection.destroy();
+                connectToVoice(channel);
+            }
+        });
+
+        // حل مشكلة Socket و Encryption
+        connection.on('error', error => {
+            console.error("❌ خطأ في الصوت:", error);
+            if (error.message.includes('socket closed') || error.message.includes('encryption')) {
                 connection.destroy();
                 connectToVoice(channel);
             }
         });
 
     } catch (error) {
-        console.error("❌ فشل الدخول للروم:", error);
+        console.error("❌ فشل الاتصال:", error);
     }
 }
 
 client.on('ready', () => {
-    console.log(`✅ ${client.user.tag} متصل الآن!`);
+    console.log(`✅ متصل الآن باسم: ${client.user.tag}`);
     const channel = client.channels.cache.get(VOICE_ID);
-    
     if (channel) {
         connectToVoice(channel);
     } else {
-        console.log("❌ لم أستطع العثور على الروم، تأكد من أن البوت موجود في السيرفر!");
+        console.log("❌ لم أجد الروم! تأكد أن البوت داخل السيرفر.");
     }
 });
 
